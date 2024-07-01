@@ -151,7 +151,7 @@ jobs:
         zipalign -f -p -v -z 4 framework_new.zip aligned_framework.jar
         zipalign -f -p -v -z 4 services_new.zip aligned_services.jar
 
-- name: Copy aligned jars to Magisk module
+    - name: Copy aligned jars to Magisk module
       run: |
         mkdir -p magisk_module/system/framework
         cp aligned_framework.jar magisk_module/system/framework/framework.jar
@@ -184,7 +184,7 @@ jobs:
         mkdir -p out
         chmod +w moded_framework_services_${{ env.device_name }}_${{ env.version }}.zip
         mv moded_framework_services_${{ env.device_name }}_${{ env.version }}.zip out/
-        
+
     - name: Create Release Notes
       run: |
         echo "## Release Notes" > release_notes.txt
