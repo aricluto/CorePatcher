@@ -6,15 +6,20 @@ on:
       framework_jar_url:
         description: 'URL to download framework.jar'
         required: true
-        default: 'https://dumps.tadiphone.dev/dumps/redmi/xaga/-/raw/missi_phone_cn-user-14-UP1A.231005.007-V816.0.1.0.ULOCNXM-release-keys/system/system/framework/framework.jar'
       services_jar_url:
         description: 'URL to download services.jar'
         required: true
-        default: 'https://dumps.tadiphone.dev/dumps/redmi/xaga/-/raw/missi_phone_cn-user-14-UP1A.231005.007-V816.0.1.0.ULOCNXM-release-keys/system/system/framework/services.jar'
       android_api_level:
         description: 'Android API level'
         required: true
         default: '34'
+      custom_device_name:
+        description: 'Custom device name (optional)'
+        required: false
+      custom_version:
+        description: 'Custom version (optional)'
+        required: false
+
 
 jobs:
   build:
@@ -153,16 +158,25 @@ jobs:
         cp aligned_framework.jar magisk_module/system/framework/framework.jar
         cp aligned_services.jar magisk_module/system/framework/services.jar
 
-    - name: Create Version From Link
+   - name: Create Version From Link
       run: |
-        framework_url="${{ github.event.inputs.framework_jar_url }}"
-        version=$(echo $framework_url | grep -oP '(?<=V)[^/]*(?=/system)')
-        device_name=$(echo $framework_url | grep -oP '(?<=redmi/)[^/]*(?=/-)')
-        echo "version=${version}" >> $GITHUB_ENV
-        echo "device_name=${device_name}" >> $GITHUB_ENV
+        if [ -z "${{ github.event.inputs.custom_version }}" ]; then
+          framework_url="${{ github.event.inputs.framework_jar_url }}"
+          version=$(echo $framework_url | grep -oP '(?<=V)[^/]*(?=/system)')
+          echo "version=${version}" >> $GITHUB_ENV
+        else
+          echo "version=${{ github.event.inputs.custom_version }}" >> $GITHUB_ENV
+        fi
+        if [ -z "${{ github.event.inputs.custom_device_name }}" ]; then
+          framework_url="${{ github.event.inputs.framework_jar_url }}"
+          device_name=$(echo $framework_url | grep -oP '(?<=redmi/)[^/]*(?=/-)')
+          echo "device_name=${device_name}" >> $GITHUB_ENV
+        else
+          echo "device_name=${{ github.event.inputs.custom_device_name }}" >> $GITHUB_ENV
+        fi
         echo "version=${version}"
         echo "device_name=${device_name}"
-      
+
     - name: Zip Magisk module
       run: |
         cd magisk_module
@@ -177,6 +191,7 @@ jobs:
         echo "## Release Notes" > release_notes.txt
         echo "- Built modified jars from commit ${{ github.sha }}" >> release_notes.txt
         echo "- Version: ${{ env.version }}" >> release_notes.txt
+        echo "- Core patch applied: ${{ github.event.inputs.core_patch }}" >> release_notes.txt
 
     - name: Create Release
       uses: ncipollo/release-action@v1
