@@ -40,11 +40,11 @@ jobs:
 
     - name: Copy framework.jar from assets
       run: |
-        cp assets/framework.jar framework.jar
+        cp assests/framework.jar framework.jar
 
     - name: Copy services.jar from assets
       run: |
-        cp assets/services.jar services.jar
+        cp assests/services.jar services.jar
 
     - name: Verify framework.jar
       run: |
