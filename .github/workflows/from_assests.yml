@@ -1,0 +1,196 @@
+name: Modify Framework and Services from assests
+
+on:
+  workflow_dispatch:
+    inputs:
+      android_api_level:
+        description: 'Android API level'
+        required: true
+        default: '34'
+      custom_device_name:
+        description: 'Custom device name ()'
+        required: true
+      custom_version:
+        description: 'Custom version ()'
+        required: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+      actions: write
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '11'
+
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt full-upgrade -y
+        sudo apt install -y default-jdk zipalign 7zip python3
+
+    - name: Copy framework.jar from assets
+      run: |
+        cp assets/framework.jar framework.jar
+
+    - name: Copy services.jar from assets
+      run: |
+        cp assets/services.jar services.jar
+
+    - name: Verify framework.jar
+      run: |
+        file framework.jar
+        hexdump -C framework.jar | head -n 10
+
+    - name: Verify services.jar
+      run: |
+        file services.jar
+        hexdump -C services.jar | head -n 10
+
+    - name: Clone smali repository
+      run: git clone --depth=1 https://github.com/JesusFreke/smali.git
+
+    - name: Build smali and baksmali
+      run: |
+        cd smali
+        ./gradlew build
+
+    - name: Extract framework.jar
+      run: 7z x framework.jar -oframework
+
+    - name: Extract services.jar
+      run: 7z x services.jar -oservices
+
+    - name: Decompile framework dex files
+      run: |
+        java -jar smali/baksmali/build/libs/baksmali.jar d -a ${{ github.event.inputs.android_api_level }} framework/classes.dex -o classes
+        java -jar smali/baksmali/build/libs/baksmali.jar d -a ${{ github.event.inputs.android_api_level }} framework/classes2.dex -o classes2
+        java -jar smali/baksmali/build/libs/baksmali.jar d -a ${{ github.event.inputs.android_api_level }} framework/classes3.dex -o classes3
+        java -jar smali/baksmali/build/libs/baksmali.jar d -a ${{ github.event.inputs.android_api_level }} framework/classes4.dex -o classes4
+
+    - name: Decompile services dex files
+      run: |
+        java -jar smali/baksmali/build/libs/baksmali.jar d -a ${{ github.event.inputs.android_api_level }} services/classes.dex -o services_classes
+        java -jar smali/baksmali/build/libs/baksmali.jar d -a ${{ github.event.inputs.android_api_level }} services/classes2.dex -o services_classes2
+        java -jar smali/baksmali/build/libs/baksmali.jar d -a ${{ github.event.inputs.android_api_level }} services/classes3.dex -o services_classes3
+
+    - name: List decompiled files for debugging
+      run: |
+        echo "Contents of classes directory:"
+        find classes
+        echo "Contents of classes2 directory:"
+        find classes2
+        echo "Contents of classes3 directory:"
+        find classes3
+        echo "Contents of services_classes directory:"
+        find services_classes
+        echo "Contents of services_classes2 directory:"
+        find services_classes2
+        echo "Contents of services_classes3 directory:"
+        find services_classes3
+
+    - name: Backup smali files
+      run: |
+        cp -r classes classes_backup
+        cp -r classes2 classes2_backup
+        cp -r classes3 classes3_backup
+        cp -r services_classes services_classes_backup
+        cp -r services_classes2 services_classes2_backup
+        cp -r services_classes3 services_classes3_backup
+
+    - name: Modify framework smali files
+      run: |
+        python3 framework_patch.py
+
+    - name: Modify services smali files
+      run: |
+        python3 services_patch.py
+
+    - name: Recompile framework dex files
+      run: |
+        java -jar smali/smali/build/libs/smali.jar a -a ${{ github.event.inputs.android_api_level }} classes -o framework/classes.dex
+        java -jar smali/smali/build/libs/smali.jar a -a ${{ github.event.inputs.android_api_level }} classes2 -o framework/classes2.dex
+        java -jar smali/smali/build/libs/smali.jar a -a ${{ github.event.inputs.android_api_level }} classes3 -o framework/classes3.dex
+        java -jar smali/smali/build/libs/smali.jar a -a ${{ github.event.inputs.android_api_level }} classes4 -o framework/classes4.dex
+
+    - name: Recompile services dex files
+      run: |
+        java -jar smali/smali/build/libs/smali.jar a -a ${{ github.event.inputs.android_api_level }} services_classes -o services/classes.dex
+        java -jar smali/smali/build/libs/smali.jar a -a ${{ github.event.inputs.android_api_level }} services_classes2 -o services/classes2.dex
+        java -jar smali/smali/build/libs/smali.jar a -a ${{ github.event.inputs.android_api_level }} services_classes3 -o services/classes3.dex
+
+    - name: Recompile framework.jar
+      run: |
+        cd framework
+        7z a -tzip ../framework_new.zip *
+        cd ..
+
+    - name: Recompile services.jar
+      run: |
+        cd services
+        7z a -tzip ../services_new.zip *
+        cd ..
+
+    - name: Align the zips
+      run: |
+        zipalign -f -p -v -z 4 framework_new.zip aligned_framework.jar
+        zipalign -f -p -v -z 4 services_new.zip aligned_services.jar
+
+    - name: Copy aligned jars to Magisk module
+      run: |
+        mkdir -p magisk_module/system/framework
+        cp aligned_framework.jar magisk_module/system/framework/framework.jar
+        cp aligned_services.jar magisk_module/system/framework/services.jar
+
+    - name: Create Version
+      run: |
+        if [ -z "${{ github.event.inputs.custom_version }}" ]; then
+          version=$(date +"%Y%m%d")
+          echo "version=${version}" >> $GITHUB_ENV
+        else
+          echo "version=${{ github.event.inputs.custom_version }}" >> $GITHUB_ENV
+        fi
+        if [ -z "${{ github.event.inputs.custom_device_name }}" ]; then
+          device_name="generic"
+          echo "device_name=${device_name}" >> $GITHUB_ENV
+        else
+          echo "device_name=${{ github.event.inputs.custom_device_name }}" >> $GITHUB_ENV
+        fi
+        echo "version=${version}"
+        echo "device_name=${device_name}"
+
+    - name: Zip Magisk module
+      run: |
+        cd magisk_module
+        zip -r ../moded_framework_services_${{ env.device_name }}_${{ env.version }}.zip *
+        cd ..
+        mkdir -p out
+        chmod +w moded_framework_services_${{ env.device_name }}_${{ env.version }}.zip
+        mv moded_framework_services_${{ env.device_name }}_${{ env.version }}.zip out/
+
+    - name: Create Release Notes
+      run: |
+        echo "## Release Notes" > release_notes.txt
+        echo "- Built modified jars from commit ${{ github.sha }}" >> release_notes.txt
+        echo "- Version: ${{ env.version }}" >> release_notes.txt
+        echo "- Device: ${{ env.device_name }}" >> release_notes.txt
+
+    - name: Create Release
+      uses: ncipollo/release-action@v1
+      with:
+        artifacts: out/*
+        tag: ${{ env.version }}
+        name: moded_${{ env.device_name }}_${{ env.version }}
+        allowUpdates: true
+        makeLatest: true
+        bodyFile: release_notes.txt
+        token: ${{ secrets.GITHUB_TOKEN }}
