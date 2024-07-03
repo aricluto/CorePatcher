@@ -1,4 +1,4 @@
-# patch services and framework to disable apk verify
+# CorePatcher
 
 
 Fork the project and use the actions feature
@@ -26,3 +26,10 @@ Tested on xaga
 3.disable downgrade apk check
 
 4.disable ispersistent check，can install persistent apk like systemui
+
+
+## Credits
+
+- [hyperceler](https://github.com/ReChronoRain/HyperCeiler)
+- [CorePatch](https://github.com/LSPosed/CorePatch)
+- and many more
