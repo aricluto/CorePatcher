@@ -75,7 +75,7 @@ jobs:
         mkdir -p classes
         for i in {1..10}; do
           if [ -f "framework/classes${i}.dex" ]; then
-            java -jar smali/baksmali/build/libs/baksmali.jar d -a ${{ github.event.inputs.android_api_level }} framework/classes${i}.dex -o classes/classes${i}
+            java -jar smali/baksmali/build/libs/baksmali.jar d -a ${{ github.event.inputs.android_api_level }} framework/classes${i}.dex -o classes/classes${i} 2>&1 | tee -a decompile_framework.log
           else
             break
           fi
@@ -86,16 +86,14 @@ jobs:
         mkdir -p services_classes
         for i in {1..10}; do
           if [ -f "services/classes${i}.dex" ]; then
-            java -jar smali/baksmali/build/libs/baksmali.jar d -a ${{ github.event.inputs.android_api_level }} services/classes${i}.dex -o services_classes/classes${i}
+            java -jar smali/baksmali/build/libs/baksmali.jar d -a ${{ github.event.inputs.android_api_level }} services/classes${i}.dex -o services_classes/classes${i} 2>&1 | tee -a decompile_services.log
           else
             break
           fi
         done
-    
+
     - name: Modify framework smali files
       run: |
-        echo "Current directory structure:"
-        ls -R
         echo "Running framework_patch.py"
         python3 framework_patch.py 2>&1 | tee framework_patch.log
       continue-on-error: true
@@ -103,53 +101,25 @@ jobs:
     
     - name: Modify services smali files
       run: |
-        echo "Current directory structure:"
-        ls -R
         echo "Running services_patch.py"
         python3 services_patch.py 2>&1 | tee services_patch.log
       continue-on-error: true
     
-
-    - name: List decompiled files for debugging
-      run: |
-        for dir in classes* services_classes*; do
-          if [ -d "$dir" ]; then
-            echo "Contents of $dir directory:"
-            find "$dir"
-          fi
-        done
-    
-    - name: Backup smali files
-      run: |
-        for dir in classes* services_classes*; do
-          if [ -d "$dir" ]; then
-            cp -r "$dir" "${dir}_backup"
-          fi
-        done
-
-    - name: Modify framework smali files
-      run: |
-        python3 framework_patch.py
-
-    - name: Modify services smali files
-      run: |
-        python3 services_patch.py
-
     - name: Recompile framework dex files
       run: |
         for i in {1..10}; do
-          if [ -d "classes${i}" ]; then
-            java -jar smali/smali/build/libs/smali.jar a -a ${{ github.event.inputs.android_api_level }} classes${i} -o framework/classes${i}.dex
+          if [ -d "classes${i:+$i}" ]; then
+            java -jar smali/smali/build/libs/smali.jar a -a ${{ github.event.inputs.android_api_level }} "classes${i:+$i}" -o "framework/classes${i:+$i}.dex" 2>&1 | tee -a recompile_framework.log
           else
             break
           fi
         done
-
+    
     - name: Recompile services dex files
       run: |
         for i in {1..10}; do
-          if [ -d "services_classes${i}" ]; then
-            java -jar smali/smali/build/libs/smali.jar a -a ${{ github.event.inputs.android_api_level }} services_classes${i} -o services/classes${i}.dex
+          if [ -d "services_classes${i:+$i}" ]; then
+            java -jar smali/smali/build/libs/smali.jar a -a ${{ github.event.inputs.android_api_level }} "services_classes${i:+$i}" -o "services/classes${i:+$i}.dex" 2>&1 | tee -a recompile_services.log
           else
             break
           fi
