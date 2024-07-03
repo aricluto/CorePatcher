@@ -78,17 +78,23 @@ jobs:
 
     - name: Decompile framework dex files
       run: |
-        java -jar smali/baksmali/build/libs/baksmali.jar d -a ${{ github.event.inputs.android_api_level }} framework/classes.dex -o classes
-        java -jar smali/baksmali/build/libs/baksmali.jar d -a ${{ github.event.inputs.android_api_level }} framework/classes2.dex -o classes2
-        java -jar smali/baksmali/build/libs/baksmali.jar d -a ${{ github.event.inputs.android_api_level }} framework/classes3.dex -o classes3
-        java -jar smali/baksmali/build/libs/baksmali.jar d -a ${{ github.event.inputs.android_api_level }} framework/classes4.dex -o classes4
+        for i in {1..10}; do
+        if [ -f "framework/classes${i:+$i}.dex" ]; then
+        java -jar smali/baksmali/build/libs/baksmali.jar d -a ${{ github.event.inputs.android_api_level }} "framework/classes${i:+$i}.dex" -o "classes${i:+$i}"
+        else
+        break
+        fi
+        done
 
     - name: Decompile services dex files
       run: |
-        java -jar smali/baksmali/build/libs/baksmali.jar d -a ${{ github.event.inputs.android_api_level }} services/classes.dex -o services_classes
-        java -jar smali/baksmali/build/libs/baksmali.jar d -a ${{ github.event.inputs.android_api_level }} services/classes2.dex -o services_classes2
-        java -jar smali/baksmali/build/libs/baksmali.jar d -a ${{ github.event.inputs.android_api_level }} services/classes3.dex -o services_classes3
-
+        for i in {1..10}; do
+        if [ -f "services/classes${i:+$i}.dex" ]; then
+        java -jar smali/baksmali/build/libs/baksmali.jar d -a ${{ github.event.inputs.android_api_level }} "services/classes${i:+$i}.dex" -o "services_classes${i:+$i}"
+        else
+        break
+        fi
+        done
     - name: List decompiled files for debugging
       run: |
         echo "Contents of classes directory:"
