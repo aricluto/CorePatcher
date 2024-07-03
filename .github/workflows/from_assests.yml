@@ -69,26 +69,70 @@ jobs:
 
     - name: Extract services.jar
       run: 7z x services.jar -oservices
-
+      
     - name: Decompile framework dex files
       run: |
+        mkdir -p classes
         for i in {1..10}; do
           if [ -f "framework/classes${i}.dex" ]; then
-            java -jar smali/baksmali/build/libs/baksmali.jar d -a ${{ github.event.inputs.android_api_level }} framework/classes${i}.dex -o classes${i}
+            java -jar smali/baksmali/build/libs/baksmali.jar d -a ${{ github.event.inputs.android_api_level }} framework/classes${i}.dex -o classes/classes${i}
           else
             break
           fi
         done
-
+    
     - name: Decompile services dex files
       run: |
+        mkdir -p services_classes
         for i in {1..10}; do
           if [ -f "services/classes${i}.dex" ]; then
-            java -jar smali/baksmali/build/libs/baksmali.jar d -a ${{ github.event.inputs.android_api_level }} services/classes${i}.dex -o services_classes${i}
+            java -jar smali/baksmali/build/libs/baksmali.jar d -a ${{ github.event.inputs.android_api_level }} services/classes${i}.dex -o services_classes/classes${i}
           else
             break
           fi
         done
+    
+    - name: Check directory structure
+      run: |
+        echo "Current directory:"
+        pwd
+        echo "Directory contents:"
+        ls -R
+        echo "Classes directories:"
+        ls -l classes services_classes
+    
+    - name: Modify framework smali files
+      run: |
+        echo "Current directory structure:"
+        ls -R
+        echo "Running framework_patch.py"
+        python3 framework_patch.py 2>&1 | tee framework_patch.log
+      continue-on-error: true
+    
+    - name: Check framework_patch.py output
+      if: always()
+      run: |
+        echo "framework_patch.py output:"
+        cat framework_patch.log
+        echo "Directory structure after patching:"
+        ls -R
+    
+    - name: Modify services smali files
+      run: |
+        echo "Current directory structure:"
+        ls -R
+        echo "Running services_patch.py"
+        python3 services_patch.py 2>&1 | tee services_patch.log
+      continue-on-error: true
+    
+    - name: Check services_patch.py output
+      if: always()
+      run: |
+        echo "services_patch.py output:"
+        cat services_patch.log
+        echo "Directory structure after patching:"
+        ls -R
+    
 
     - name: List decompiled files for debugging
       run: |

@@ -5,6 +5,12 @@ import logging
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+def find_file(name, path):
+    for root, dirs, files in os.walk(path):
+        if name in files:
+            return os.path.join(root, name)
+    return None
+
 
 def modify_file(file_path):
     logging.info(f"Modifying file: {file_path}")
@@ -204,6 +210,32 @@ def modify_smali_files(directories):
             logging.warning(f"File not found: {package_info_utils}")
 
 
+def modify_smali_files(base_directory):
+    directories = [os.path.join(base_directory, f"classes{i}") for i in range(1, 6)]
+    directories = [d for d in directories if os.path.exists(d)]
+    
+    if not directories:
+        logging.error(f"No classes directories found in {base_directory}. Make sure you're in the correct directory.")
+        return
+
+    for directory in directories:
+        logging.info(f"Processing directory: {directory}")
+        files_to_modify = {
+            'PackageManagerServiceUtils.smali': modify_file,
+            'InstallPackageHelper.smali': modify_file,
+            'VerificationParams.smali': modify_file,
+            'ParsingPackageUtils.smali': modify_parsing_package_utils,
+            'InstallPackageHelper.smali': modify_invoke_interface
+        }
+
+        for file_name, modify_func in files_to_modify.items():
+            file_path = find_file(file_name, directory)
+            if file_path:
+                logging.info(f"Found file: {file_path}")
+                modify_func(file_path)
+            else:
+                logging.warning(f"File not found: {file_name} in {directory}")
+
 if __name__ == "__main__":
-    directories = ["services_classes", "services_classes2", "services_classes3", "services_classes4"]
-    modify_smali_files(directories)
+    base_directory = "services_classes"  # 修改为新的目录结构
+    modify_smali_files(base_directory)

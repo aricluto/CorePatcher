@@ -27,143 +27,160 @@ jobs:
       contents: write
       packages: write
       actions: write
-
+    
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-
+    
     - name: Set up Java
       uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
         java-version: '11'
-
+    
     - name: Install dependencies
       run: |
         sudo apt update
-        sudo apt full-upgrade -y
         sudo apt install -y default-jdk zipalign 7zip python3
-
+    
     - name: Download framework.jar
       run: |
         curl -L -o framework.jar "${{ github.event.inputs.framework_jar_url }}"
-
+    
     - name: Download services.jar
       run: |
         curl -L -o services.jar "${{ github.event.inputs.services_jar_url }}"
-
+    
     - name: Verify framework.jar
       run: |
         file framework.jar
         hexdump -C framework.jar | head -n 10
-
+    
     - name: Verify services.jar
       run: |
         file services.jar
         hexdump -C services.jar | head -n 10
-
+    
     - name: Clone smali repository
       run: git clone --depth=1 https://github.com/JesusFreke/smali.git
-
+    
     - name: Build smali and baksmali
       run: |
         cd smali
         ./gradlew build
-
+    
     - name: Extract framework.jar
       run: 7z x framework.jar -oframework
-
+    
     - name: Extract services.jar
       run: 7z x services.jar -oservices
-
+    
     - name: Decompile framework dex files
       run: |
+        mkdir -p classes
         for i in {1..10}; do
           if [ -f "framework/classes${i}.dex" ]; then
-            java -jar smali/baksmali/build/libs/baksmali.jar d -a ${{ github.event.inputs.android_api_level }} framework/classes${i}.dex -o classes${i}
+            java -jar smali/baksmali/build/libs/baksmali.jar d -a ${{ github.event.inputs.android_api_level }} framework/classes${i}.dex -o classes/classes${i}
           else
             break
-          fi
-        done
-
-    - name: Decompile services dex files
-      run: |
-        for i in {1..10}; do
-          if [ -f "services/classes${i}.dex" ]; then
-            java -jar smali/baksmali/build/libs/baksmali.jar d -a ${{ github.event.inputs.android_api_level }} services/classes${i}.dex -o services_classes${i}
-          else
-            break
-          fi
-        done
-
-    - name: List decompiled files for debugging
-      run: |
-        for dir in classes* services_classes*; do
-          if [ -d "$dir" ]; then
-            echo "Contents of $dir directory:"
-            find "$dir"
           fi
         done
     
-    - name: Backup smali files
+    - name: Decompile services dex files
       run: |
-        for dir in classes* services_classes*; do
-          if [ -d "$dir" ]; then
-            cp -r "$dir" "${dir}_backup"
+        mkdir -p services_classes
+        for i in {1..10}; do
+          if [ -f "services/classes${i}.dex" ]; then
+            java -jar smali/baksmali/build/libs/baksmali.jar d -a ${{ github.event.inputs.android_api_level }} services/classes${i}.dex -o services_classes/classes${i}
+          else
+            break
           fi
         done
-
+    
+    - name: Check directory structure
+      run: |
+        echo "Current directory:"
+        pwd
+        echo "Directory contents:"
+        ls -R
+        echo "Classes directories:"
+        ls -l classes services_classes
+    
     - name: Modify framework smali files
       run: |
-        python3 framework_patch.py
-
+        echo "Current directory structure:"
+        ls -R
+        echo "Running framework_patch.py"
+        python3 framework_patch.py 2>&1 | tee framework_patch.log
+      continue-on-error: true
+    
+    - name: Check framework_patch.py output
+      if: always()
+      run: |
+        echo "framework_patch.py output:"
+        cat framework_patch.log
+        echo "Directory structure after patching:"
+        ls -R
+    
     - name: Modify services smali files
       run: |
-        python3 services_patch.py
-
+        echo "Current directory structure:"
+        ls -R
+        echo "Running services_patch.py"
+        python3 services_patch.py 2>&1 | tee services_patch.log
+      continue-on-error: true
+    
+    - name: Check services_patch.py output
+      if: always()
+      run: |
+        echo "services_patch.py output:"
+        cat services_patch.log
+        echo "Directory structure after patching:"
+        ls -R
+    
     - name: Recompile framework dex files
       run: |
         for i in {1..10}; do
-          if [ -d "classes${i}" ]; then
-            java -jar smali/smali/build/libs/smali.jar a -a ${{ github.event.inputs.android_api_level }} classes${i} -o framework/classes${i}.dex
+          if [ -d "classes/classes${i}" ]; then
+            java -jar smali/smali/build/libs/smali.jar a -a ${{ github.event.inputs.android_api_level }} classes/classes${i} -o framework/classes${i}.dex
           else
             break
           fi
         done
-
+    
     - name: Recompile services dex files
       run: |
         for i in {1..10}; do
-          if [ -d "services_classes${i}" ]; then
-            java -jar smali/smali/build/libs/smali.jar a -a ${{ github.event.inputs.android_api_level }} services_classes${i} -o services/classes${i}.dex
+          if [ -d "services_classes/classes${i}" ]; then
+            java -jar smali/smali/build/libs/smali.jar a -a ${{ github.event.inputs.android_api_level }} services_classes/classes${i} -o services/classes${i}.dex
           else
             break
           fi
         done
-        
+    
     - name: Recompile framework.jar
       run: |
         cd framework
         7z a -tzip ../framework_new.zip *
         cd ..
-
+    
     - name: Recompile services.jar
       run: |
         cd services
         7z a -tzip ../services_new.zip *
         cd ..
-
+    
     - name: Align the zips
       run: |
         zipalign -f -p -v -z 4 framework_new.zip aligned_framework.jar
         zipalign -f -p -v -z 4 services_new.zip aligned_services.jar
-
+    
     - name: Copy aligned jars to Magisk module
       run: |
         mkdir -p magisk_module/system/framework
         cp aligned_framework.jar magisk_module/system/framework/framework.jar
         cp aligned_services.jar magisk_module/system/framework/services.jar
-
+    
     - name: Create Version From Link
       run: |
         if [ -z "${{ github.event.inputs.custom_version }}" ]; then
@@ -182,7 +199,7 @@ jobs:
         fi
         echo "version=${version}"
         echo "device_name=${device_name}"
-
+    
     - name: Zip Magisk module
       run: |
         cd magisk_module
@@ -191,21 +208,21 @@ jobs:
         mkdir -p out
         chmod +w moded_framework_services_${{ env.device_name }}_${{ env.version }}.zip
         mv moded_framework_services_${{ env.device_name }}_${{ env.version }}.zip out/
-
+    
     - name: Create Release Notes
       run: |
         echo "## Release Notes" > release_notes.txt
         echo "- Built modified jars from commit ${{ github.sha }}" >> release_notes.txt
         echo "- Version: ${{ env.version }}" >> release_notes.txt
         echo "- Core patch applied: ${{ github.event.inputs.core_patch }}" >> release_notes.txt
-
+    
     - name: Create Release
       uses: ncipollo/release-action@v1
       with:
-          artifacts: out/*
-          tag: ${{ env.version }}
-          name: moded_${{ env.device_name }}_${{ env.version }}
-          allowUpdates: true
-          makeLatest: true
-          bodyFile: release_notes.txt
-          token: ${{ secrets.GITHUB_TOKEN }}
+        artifacts: out/*
+        tag: ${{ env.version }}
+        name: moded_${{ env.device_name }}_${{ env.version }}
+        allowUpdates: true
+        makeLatest: true
+        bodyFile: release_notes.txt
+        token: ${{ secrets.GITHUB_TOKEN }}

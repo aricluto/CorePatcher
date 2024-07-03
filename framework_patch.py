@@ -6,6 +6,12 @@ import shutil
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+def find_file(name, path):
+    for root, dirs, files in os.walk(path):
+        if name in files:
+            return os.path.join(root, name)
+    return None
+
 
 def modify_file(file_path):
     logging.info(f"Modifying file: {file_path}")
@@ -220,73 +226,41 @@ def copy_and_replace_files(source_dirs, target_dirs, sub_dirs):
                 logging.warning(f"Target directory does not exist: {target_policy_dir}")
 
 
-def modify_smali_files(directories):
+def modify_smali_files(base_directory):
+    directories = [os.path.join(base_directory, f"classes{i}") for i in range(1, 6)]
+    directories = [d for d in directories if os.path.exists(d)]
+    
+    if not directories:
+        logging.error(f"No classes directories found in {base_directory}. Make sure you're in the correct directory.")
+        return
+
     for directory in directories:
-        signing_details = os.path.join(directory, 'android/content/pm/SigningDetails.smali')
-        package_parser_signing_details = os.path.join(directory,
-                                                      'android/content/pm/PackageParser$SigningDetails.smali')
-        apk_signature_verifier = os.path.join(directory, 'android/util/apk/ApkSignatureVerifier.smali')
-        apk_signature_scheme_v2_verifier = os.path.join(directory,
-                                                        'android/util/apk/ApkSignatureSchemeV2Verifier.smali')
-        apk_signature_scheme_v3_verifier = os.path.join(directory,
-                                                        'android/util/apk/ApkSignatureSchemeV3Verifier.smali')
-        apk_signing_block_utils = os.path.join(directory, 'android/util/apk/ApkSigningBlockUtils.smali')
-        package_parser = os.path.join(directory, 'android/content/pm/PackageParser.smali')
-        package_parser_exception = os.path.join(directory,
-                                                'android/content/pm/PackageParser$PackageParserException.smali')
-        strict_jar_verifier = os.path.join(directory, 'android/util/jar/StrictJarVerifier.smali')
+        logging.info(f"Processing directory: {directory}")
+        files_to_modify = {
+            'SigningDetails.smali': modify_file,
+            'PackageParser$SigningDetails.smali': modify_file,
+            'ApkSignatureVerifier.smali': lambda f: (modify_apk_signature_verifier(f), modify_file(f)),
+            'ApkSignatureSchemeV2Verifier.smali': modify_apk_signature_scheme_v2_verifier,
+            'ApkSignatureSchemeV3Verifier.smali': modify_apk_signature_scheme_v3_verifier,
+            'ApkSigningBlockUtils.smali': modify_apk_signing_block_utils,
+            'PackageParser.smali': modify_package_parser,
+            'PackageParser$PackageParserException.smali': modify_exception_file,
+            'StrictJarVerifier.smali': modify_strict_jar_verifier
+        }
 
-        if os.path.exists(signing_details):
-            logging.info(f"Found file: {signing_details}")
-            modify_file(signing_details)
-        else:
-            logging.warning(f"File not found: {signing_details}")
-        if os.path.exists(package_parser_signing_details):
-            logging.info(f"Found file: {package_parser_signing_details}")
-            modify_file(package_parser_signing_details)
-        else:
-            logging.warning(f"File not found: {package_parser_signing_details}")
-        if os.path.exists(apk_signature_verifier):
-            logging.info(f"Found file: {apk_signature_verifier}")
-            modify_apk_signature_verifier(apk_signature_verifier)
-            modify_file(apk_signature_verifier)
-        else:
-            logging.warning(f"File not found: {apk_signature_verifier}")
-        if os.path.exists(apk_signature_scheme_v2_verifier):
-            logging.info(f"Found file: {apk_signature_scheme_v2_verifier}")
-            modify_apk_signature_scheme_v2_verifier(apk_signature_scheme_v2_verifier)
-        else:
-            logging.warning(f"File not found: {apk_signature_scheme_v2_verifier}")
-        if os.path.exists(apk_signature_scheme_v3_verifier):
-            logging.info(f"Found file: {apk_signature_scheme_v3_verifier}")
-            modify_apk_signature_scheme_v3_verifier(apk_signature_scheme_v3_verifier)
-        else:
-            logging.warning(f"File not found: {apk_signature_scheme_v3_verifier}")
-        if os.path.exists(apk_signing_block_utils):
-            logging.info(f"Found file: {apk_signing_block_utils}")
-            modify_apk_signing_block_utils(apk_signing_block_utils)
-        else:
-            logging.warning(f"File not found: {apk_signing_block_utils}")
-        if os.path.exists(package_parser):
-            logging.info(f"Found file: {package_parser}")
-            modify_package_parser(package_parser)
-        else:
-            logging.warning(f"File not found: {package_parser}")
-        if os.path.exists(package_parser_exception):
-            logging.info(f"Found file: {package_parser_exception}")
-            modify_exception_file(package_parser_exception)
-        else:
-            logging.warning(f"File not found: {package_parser_exception}")
-        if os.path.exists(strict_jar_verifier):
-            logging.info(f"Found file: {strict_jar_verifier}")
-            modify_strict_jar_verifier(strict_jar_verifier)
-        else:
-            logging.warning(f"File not found: {strict_jar_verifier}")
-
+        for file_name, modify_func in files_to_modify.items():
+            file_path = find_file(file_name, directory)
+            if file_path:
+                logging.info(f"Found file: {file_path}")
+                modify_func(file_path)
+            else:
+                logging.warning(f"File not found: {file_name} in {directory}")
 
 if __name__ == "__main__":
-    directories = ["classes", "classes2", "classes3", "classes4", "classes5"]
-    modify_smali_files(directories)
+    base_directory = "classes"  # 修改为新的目录结构
+    modify_smali_files(base_directory)
+    
     source_dirs = ["assets/SettingsHelper", "assets/Utils"]
+    target_dirs = [base_directory]
     sub_dirs = ["android/preference", "android/util"]
-    copy_and_replace_files(source_dirs, directories, sub_dirs)
+    copy_and_replace_files(source_dirs, target_dirs, sub_dirs)
