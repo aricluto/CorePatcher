@@ -92,15 +92,6 @@ jobs:
           fi
         done
     
-    - name: Check directory structure
-      run: |
-        echo "Current directory:"
-        pwd
-        echo "Directory contents:"
-        ls -R
-        echo "Classes directories:"
-        ls -l classes services_classes
-    
     - name: Modify framework smali files
       run: |
         echo "Current directory structure:"
@@ -109,13 +100,6 @@ jobs:
         python3 framework_patch.py 2>&1 | tee framework_patch.log
       continue-on-error: true
     
-    - name: Check framework_patch.py output
-      if: always()
-      run: |
-        echo "framework_patch.py output:"
-        cat framework_patch.log
-        echo "Directory structure after patching:"
-        ls -R
     
     - name: Modify services smali files
       run: |
@@ -124,14 +108,6 @@ jobs:
         echo "Running services_patch.py"
         python3 services_patch.py 2>&1 | tee services_patch.log
       continue-on-error: true
-    
-    - name: Check services_patch.py output
-      if: always()
-      run: |
-        echo "services_patch.py output:"
-        cat services_patch.log
-        echo "Directory structure after patching:"
-        ls -R
     
 
     - name: List decompiled files for debugging
