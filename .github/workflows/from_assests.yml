@@ -72,40 +72,40 @@ jobs:
 
     - name: Decompile framework dex files
       run: |
-        java -jar smali/baksmali/build/libs/baksmali.jar d -a ${{ github.event.inputs.android_api_level }} framework/classes.dex -o classes
-        java -jar smali/baksmali/build/libs/baksmali.jar d -a ${{ github.event.inputs.android_api_level }} framework/classes2.dex -o classes2
-        java -jar smali/baksmali/build/libs/baksmali.jar d -a ${{ github.event.inputs.android_api_level }} framework/classes3.dex -o classes3
-        java -jar smali/baksmali/build/libs/baksmali.jar d -a ${{ github.event.inputs.android_api_level }} framework/classes4.dex -o classes4
-
+        for i in {1..10}; do
+          if [ -f "framework/classes${i:+$i}.dex" ]; then
+            java -jar smali/baksmali/build/libs/baksmali.jar d -a ${{ github.event.inputs.android_api_level }} "framework/classes${i:+$i}.dex" -o "classes${i:+$i}"
+          else
+            break
+          fi
+        done
+    
     - name: Decompile services dex files
       run: |
-        java -jar smali/baksmali/build/libs/baksmali.jar d -a ${{ github.event.inputs.android_api_level }} services/classes.dex -o services_classes
-        java -jar smali/baksmali/build/libs/baksmali.jar d -a ${{ github.event.inputs.android_api_level }} services/classes2.dex -o services_classes2
-        java -jar smali/baksmali/build/libs/baksmali.jar d -a ${{ github.event.inputs.android_api_level }} services/classes3.dex -o services_classes3
+        for i in {1..10}; do
+          if [ -f "services/classes${i:+$i}.dex" ]; then
+            java -jar smali/baksmali/build/libs/baksmali.jar d -a ${{ github.event.inputs.android_api_level }} "services/classes${i:+$i}.dex" -o "services_classes${i:+$i}"
+          else
+            break
+          fi
+        done
 
     - name: List decompiled files for debugging
       run: |
-        echo "Contents of classes directory:"
-        find classes
-        echo "Contents of classes2 directory:"
-        find classes2
-        echo "Contents of classes3 directory:"
-        find classes3
-        echo "Contents of services_classes directory:"
-        find services_classes
-        echo "Contents of services_classes2 directory:"
-        find services_classes2
-        echo "Contents of services_classes3 directory:"
-        find services_classes3
-
+        for dir in classes* services_classes*; do
+          if [ -d "$dir" ]; then
+            echo "Contents of $dir directory:"
+            find "$dir"
+          fi
+        done
+    
     - name: Backup smali files
       run: |
-        cp -r classes classes_backup
-        cp -r classes2 classes2_backup
-        cp -r classes3 classes3_backup
-        cp -r services_classes services_classes_backup
-        cp -r services_classes2 services_classes2_backup
-        cp -r services_classes3 services_classes3_backup
+        for dir in classes* services_classes*; do
+          if [ -d "$dir" ]; then
+            cp -r "$dir" "${dir}_backup"
+          fi
+        done
 
     - name: Modify framework smali files
       run: |
@@ -117,16 +117,23 @@ jobs:
 
     - name: Recompile framework dex files
       run: |
-        java -jar smali/smali/build/libs/smali.jar a -a ${{ github.event.inputs.android_api_level }} classes -o framework/classes.dex
-        java -jar smali/smali/build/libs/smali.jar a -a ${{ github.event.inputs.android_api_level }} classes2 -o framework/classes2.dex
-        java -jar smali/smali/build/libs/smali.jar a -a ${{ github.event.inputs.android_api_level }} classes3 -o framework/classes3.dex
-        java -jar smali/smali/build/libs/smali.jar a -a ${{ github.event.inputs.android_api_level }} classes4 -o framework/classes4.dex
-
+        for i in {1..10}; do
+          if [ -d "classes${i:+$i}" ]; then
+            java -jar smali/smali/build/libs/smali.jar a -a ${{ github.event.inputs.android_api_level }} "classes${i:+$i}" -o "framework/classes${i:+$i}.dex"
+          else
+            break
+          fi
+        done
+    
     - name: Recompile services dex files
       run: |
-        java -jar smali/smali/build/libs/smali.jar a -a ${{ github.event.inputs.android_api_level }} services_classes -o services/classes.dex
-        java -jar smali/smali/build/libs/smali.jar a -a ${{ github.event.inputs.android_api_level }} services_classes2 -o services/classes2.dex
-        java -jar smali/smali/build/libs/smali.jar a -a ${{ github.event.inputs.android_api_level }} services_classes3 -o services/classes3.dex
+        for i in {1..10}; do
+          if [ -d "services_classes${i:+$i}" ]; then
+            java -jar smali/smali/build/libs/smali.jar a -a ${{ github.event.inputs.android_api_level }} "services_classes${i:+$i}" -o "services/classes${i:+$i}.dex"
+          else
+            break
+          fi
+        done
 
     - name: Recompile framework.jar
       run: |

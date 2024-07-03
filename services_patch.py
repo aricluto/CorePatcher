@@ -205,5 +205,17 @@ def modify_smali_files(directories):
 
 
 if __name__ == "__main__":
-    directories = ["services_classes", "services_classes2", "services_classes3"]
-    modify_smali_files(directories)
+    directories = []
+    i = 1
+    while True:
+        dir_name = f"classes{i if i > 1 else ''}"
+        if os.path.isdir(dir_name):
+            directories.append(dir_name)
+            i += 1
+        else:
+            break
+    
+    if directories:
+        modify_smali_files(directories)
+    else:
+        print("No classes directories found.")
