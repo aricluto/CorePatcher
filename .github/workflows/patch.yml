@@ -15,10 +15,10 @@ on:
         default: '34'
       custom_device_name:
         description: 'Custom device name (optional)'
-        required: false
+        required: true
       custom_version:
         description: 'Custom version (optional)'
-        required: false
+        required: true
 
 jobs:
   build:
