@@ -30,6 +30,6 @@ Tested on xaga
 
 ## Credits
 
-- [hyperceler](https://github.com/ReChronoRain/HyperCeiler)
+- [HyperCeiler](https://github.com/ReChronoRain/HyperCeiler)
 - [CorePatch](https://github.com/LSPosed/CorePatch)
 - and many more
