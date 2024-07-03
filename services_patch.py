@@ -237,5 +237,7 @@ def modify_smali_files(base_directory):
                 logging.warning(f"File not found: {file_name} in {directory}")
 
 if __name__ == "__main__":
-    base_directory = "services_classes"  # 修改为新的目录结构
+    base_directory = "." 
     modify_smali_files(base_directory)
+    
+    

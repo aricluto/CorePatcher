@@ -227,14 +227,17 @@ def copy_and_replace_files(source_dirs, target_dirs, sub_dirs):
 
 
 def modify_smali_files(base_directory):
-    directories = [os.path.join(base_directory, f"classes{i}") for i in range(1, 6)]
-    directories = [d for d in directories if os.path.exists(d)]
+    # 查找所有以 'classes' 开头的目录
+    class_dirs = glob.glob(os.path.join(base_directory, 'classes*'))
     
-    if not directories:
+    if not class_dirs:
         logging.error(f"No classes directories found in {base_directory}. Make sure you're in the correct directory.")
+        logging.info(f"Contents of {base_directory}:")
+        for item in os.listdir(base_directory):
+            logging.info(item)
         return
 
-    for directory in directories:
+    for directory in class_dirs:
         logging.info(f"Processing directory: {directory}")
         files_to_modify = {
             'SigningDetails.smali': modify_file,
@@ -257,10 +260,5 @@ def modify_smali_files(base_directory):
                 logging.warning(f"File not found: {file_name} in {directory}")
 
 if __name__ == "__main__":
-    base_directory = "classes"  # 修改为新的目录结构
+    base_directory = "."  
     modify_smali_files(base_directory)
-    
-    source_dirs = ["assets/SettingsHelper", "assets/Utils"]
-    target_dirs = [base_directory]
-    sub_dirs = ["android/preference", "android/util"]
-    copy_and_replace_files(source_dirs, target_dirs, sub_dirs)
