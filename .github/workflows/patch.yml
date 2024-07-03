@@ -99,8 +99,6 @@ jobs:
     
     - name: Modify framework smali files
       run: |
-        echo "Current directory structure:"
-        ls -R
         echo "Running framework_patch.py"
         python3 framework_patch.py 2>&1 | tee framework_patch.log
       continue-on-error: true
@@ -108,8 +106,6 @@ jobs:
     
     - name: Modify services smali files
       run: |
-        echo "Current directory structure:"
-        ls -R
         echo "Running services_patch.py"
         python3 services_patch.py 2>&1 | tee services_patch.log
       continue-on-error: true
