@@ -1,6 +1,7 @@
 import os
 import re
 import logging
+import shutil
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -200,6 +201,25 @@ def modify_strict_jar_verifier(file_path):
     logging.info(f"Completed modification for file: {file_path}")
 
 
+def copy_and_replace_files(source_dirs, target_dirs, sub_dirs):
+    for source_dir, sub_dir in zip(source_dirs, sub_dirs):
+        for target_dir in target_dirs:
+            target_policy_dir = os.path.join(target_dir, sub_dir)
+            if os.path.exists(target_policy_dir):
+                logging.info(f"Copying files from {source_dir} to {target_policy_dir}")
+                for root, dirs, files in os.walk(source_dir):
+                    for file in files:
+                        src_file = os.path.join(root, file)
+                        dst_file = os.path.join(target_policy_dir, os.path.relpath(src_file, source_dir))
+                        dst_dir = os.path.dirname(dst_file)
+                        if not os.path.exists(dst_dir):
+                            os.makedirs(dst_dir)
+                        shutil.copy2(src_file, dst_file)
+                        logging.info(f"Copied {src_file} to {dst_file}")
+            else:
+                logging.warning(f"Target directory does not exist: {target_policy_dir}")
+
+
 def modify_smali_files(directories):
     for directory in directories:
         signing_details = os.path.join(directory, 'android/content/pm/SigningDetails.smali')
@@ -264,19 +284,9 @@ def modify_smali_files(directories):
             logging.warning(f"File not found: {strict_jar_verifier}")
 
 
-
 if __name__ == "__main__":
-    directories = []
-    i = 1
-    while True:
-        dir_name = f"classes{i if i > 1 else ''}"
-        if os.path.isdir(dir_name):
-            directories.append(dir_name)
-            i += 1
-        else:
-            break
-    
-    if directories:
-        modify_smali_files(directories)
-    else:
-        print("No classes directories found.")
+    directories = ["classes", "classes2", "classes3", "classes4", "classes5"]
+    modify_smali_files(directories)
+    source_dirs = ["assets/SettingsHelper", "assets/Utils"]
+    sub_dirs = ["android/preference", "android/util"]
+    copy_and_replace_files(source_dirs, directories, sub_dirs)
