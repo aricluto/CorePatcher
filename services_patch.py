@@ -219,26 +219,18 @@ def modify_smali_files(base_directory):
         logging.error(f"No classes directories found in {base_directory}. Make sure you're in the correct directory.")
         return
 
-    for directory in directories:
-        logging.info(f"Processing directory: {directory}")
-        files_to_modify = {
-            'PackageManagerServiceUtils.smali': modify_file,
-            'InstallPackageHelper.smali': modify_file,
-            'VerificationParams.smali': modify_file,
-            'ParsingPackageUtils.smali': modify_parsing_package_utils,
-            'InstallPackageHelper.smali': modify_invoke_interface
-        }
-
-        for file_name, modify_func in files_to_modify.items():
+    for file_name, modify_func in files_to_modify.items():
+        file_found = False
+        for directory in directories:
             file_path = find_file(file_name, directory)
             if file_path:
                 logging.info(f"Found file: {file_path}")
                 modify_func(file_path)
-            else:
-                logging.warning(f"File not found: {file_name} in {directory}")
+                file_found = True
+                break
+        if not file_found:
+            logging.warning(f"File not found: {file_name} in any classes or services directory")
 
 if __name__ == "__main__":
-    base_directory = "." 
+    base_directory = "."
     modify_smali_files(base_directory)
-    
-    

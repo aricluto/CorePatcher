@@ -238,27 +238,29 @@ def modify_smali_files(base_directory):
             logging.info(item)
         return
 
-    for directory in class_dirs:
-        logging.info(f"Processing directory: {directory}")
-        files_to_modify = {
-            'SigningDetails.smali': modify_file,
-            'PackageParser$SigningDetails.smali': modify_file,
-            'ApkSignatureVerifier.smali': lambda f: (modify_apk_signature_verifier(f), modify_file(f)),
-            'ApkSignatureSchemeV2Verifier.smali': modify_apk_signature_scheme_v2_verifier,
-            'ApkSignatureSchemeV3Verifier.smali': modify_apk_signature_scheme_v3_verifier,
-            'ApkSigningBlockUtils.smali': modify_apk_signing_block_utils,
-            'PackageParser.smali': modify_package_parser,
-            'PackageParser$PackageParserException.smali': modify_exception_file,
-            'StrictJarVerifier.smali': modify_strict_jar_verifier
-        }
+    files_to_modify = {
+        'SigningDetails.smali': modify_file,
+        'PackageParser$SigningDetails.smali': modify_file,
+        'ApkSignatureVerifier.smali': lambda f: (modify_apk_signature_verifier(f), modify_file(f)),
+        'ApkSignatureSchemeV2Verifier.smali': modify_apk_signature_scheme_v2_verifier,
+        'ApkSignatureSchemeV3Verifier.smali': modify_apk_signature_scheme_v3_verifier,
+        'ApkSigningBlockUtils.smali': modify_apk_signing_block_utils,
+        'PackageParser.smali': modify_package_parser,
+        'PackageParser$PackageParserException.smali': modify_exception_file,
+        'StrictJarVerifier.smali': modify_strict_jar_verifier
+    }
 
-        for file_name, modify_func in files_to_modify.items():
+    for file_name, modify_func in files_to_modify.items():
+        file_found = False
+        for directory in class_dirs:
             file_path = find_file(file_name, directory)
             if file_path:
                 logging.info(f"Found file: {file_path}")
                 modify_func(file_path)
-            else:
-                logging.warning(f"File not found: {file_name} in {directory}")
+                file_found = True
+                break
+        if not file_found:
+            logging.warning(f"File not found: {file_name} in any classes directory")
 
 if __name__ == "__main__":
     base_directory = "."  
