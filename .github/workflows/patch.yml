@@ -14,10 +14,10 @@ on:
         required: true
         default: '34'
       custom_device_name:
-        description: 'Custom device name '
+        description: 'Device name '
         required: true
       custom_version:
-        description: 'Custom version '
+        description: 'Version Code'
         required: true
 
 jobs:
