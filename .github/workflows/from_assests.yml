@@ -37,27 +37,24 @@ jobs:
         sudo apt update
         sudo apt install -y default-jdk zipalign 7zip python3
 
-    - name: Copy framework.jar from assets
+    - name: Copy framework.jar from assests
       run: |
         cp assests/framework.jar framework.jar
 
-    - name: Copy services.jar from assets
+    - name: Copy services.jar from assests
       run: |
         cp assests/services.jar services.jar
 
     - name: Verify framework.jar
       run: |
-        if [ -f framework.jar ]; then
-            file framework.jar
-            hexdump -C framework.jar | head -n 10
-        fi
+        file framework.jar
+        hexdump -C framework.jar | head -n 10
 
     - name: Verify services.jar
       run: |
-        if [ -f framework.jar ]; then
-            7z x framework.jar -oframework
-        fi
-        
+        file services.jar
+        hexdump -C services.jar | head -n 10
+
     - name: Clone smali repository
       run: git clone --depth=1 https://github.com/JesusFreke/smali.git
 
