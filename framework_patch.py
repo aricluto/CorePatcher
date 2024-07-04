@@ -265,5 +265,5 @@ def modify_smali_files(directories):
 
 
 if __name__ == "__main__":
-    directories = ["classes", "classes2", "classes3", "classes4"]
+    directories = ["classes", "classes2", "classes3", "classes4", "classes5", "classes6"]
     modify_smali_files(directories)

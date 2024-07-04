@@ -35,7 +35,6 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt update
-        sudo apt full-upgrade -y
         sudo apt install -y default-jdk zipalign 7zip python3
 
     - name: Copy framework.jar from assets
