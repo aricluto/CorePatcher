@@ -75,12 +75,18 @@ jobs:
     - name: Decompile framework dex files
       run: |
         if [ -f framework.jar ]; then
+          if [ -f framework/classes.dex ]; then
             java -jar smali/baksmali/build/libs/baksmali.jar d -a ${{ github.event.inputs.android_api_level }} framework/classes.dex -o classes
-            java -jar smali/baksmali/build/libs/baksmali.jar d -a ${{ github.event.inputs.android_api_level }} framework/classes2.dex -o classes2
-            java -jar smali/baksmali/build/libs/baksmali.jar d -a ${{ github.event.inputs.android_api_level }} framework/classes3.dex -o classes3
-            java -jar smali/baksmali/build/libs/baksmali.jar d -a ${{ github.event.inputs.android_api_level }} framework/classes4.dex -o classes4
-            java -jar smali/baksmali/build/libs/baksmali.jar d -a ${{ github.event.inputs.android_api_level }} framework/classes5.dex -o classes5
-            java -jar smali/baksmali/build/libs/baksmali.jar d -a ${{ github.event.inputs.android_api_level }} framework/classes6.dex -o classes6
+          else
+            echo "framework/classes.dex not found, skipping..."
+          fi
+          for i in {2..6}; do
+            if [ -f framework/classes${i}.dex ]; then
+              java -jar smali/baksmali/build/libs/baksmali.jar d -a ${{ github.event.inputs.android_api_level }} framework/classes${i}.dex -o classes${i}
+            else
+              echo "framework/classes${i}.dex not found, skipping..."
+            fi
+          done
         fi
 
     - name: Decompile services dex files
@@ -129,12 +135,18 @@ jobs:
     - name: Recompile framework dex files
       run: |
         if [ -f framework.jar ]; then
+          if [ -d classes ]; then
             java -jar smali/smali/build/libs/smali.jar a -a ${{ github.event.inputs.android_api_level }} classes -o framework/classes.dex
-            java -jar smali/smali/build/libs/smali.jar a -a ${{ github.event.inputs.android_api_level }} classes2 -o framework/classes2.dex
-            java -jar smali/smali/build/libs/smali.jar a -a ${{ github.event.inputs.android_api_level }} classes3 -o framework/classes3.dex
-            java -jar smali/smali/build/libs/smali.jar a -a ${{ github.event.inputs.android_api_level }} classes4 -o framework/classes4.dex
-            java -jar smali/smali/build/libs/smali.jar a -a ${{ github.event.inputs.android_api_level }} classes5 -o framework/classes5.dex
-            java -jar smali/smali/build/libs/smali.jar a -a ${{ github.event.inputs.android_api_level }} classes6 -o framework/classes6.dex
+          else
+            echo "classes directory not found, skipping classes.dex..."
+          fi
+          for i in {2..6}; do
+            if [ -d classes${i} ]; then
+              java -jar smali/smali/build/libs/smali.jar a -a ${{ github.event.inputs.android_api_level }} classes${i} -o framework/classes${i}.dex
+            else
+              echo "classes${i} directory not found, skipping classes${i}.dex..."
+            fi
+          done
         fi
 
     - name: Recompile services dex files
