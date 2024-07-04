@@ -1,16 +1,9 @@
 import os
 import re
 import logging
-import glob
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
-def find_file(name, path):
-    for root, dirs, files in os.walk(path):
-        if name in files:
-            return os.path.join(root, name)
-    return None
 
 
 def modify_file(file_path):
@@ -211,26 +204,6 @@ def modify_smali_files(directories):
             logging.warning(f"File not found: {package_info_utils}")
 
 
-def modify_smali_files(base_directory):
-    directories = [os.path.join(base_directory, f"classes{i}") for i in range(1, 6)]
-    directories = [d for d in directories if os.path.exists(d)]
-    
-    if not directories:
-        logging.error(f"No classes directories found in {base_directory}. Make sure you're in the correct directory.")
-        return
-
-    for file_name, modify_func in files_to_modify.items():
-        file_found = False
-        for directory in directories:
-            file_path = find_file(file_name, directory)
-            if file_path:
-                logging.info(f"Found file: {file_path}")
-                modify_func(file_path)
-                file_found = True
-                break
-        if not file_found:
-            logging.warning(f"File not found: {file_name} in any classes or services directory")
-
 if __name__ == "__main__":
-    base_directory = "."
-    modify_smali_files(base_directory)
+    directories = ["services_classes", "services_classes2", "services_classes3"]
+    modify_smali_files(directories)
