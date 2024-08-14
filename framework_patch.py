@@ -130,22 +130,8 @@ def modify_exception_file(file_path):
     logging.info(f"Completed modification for file: {file_path}")
 
 
-def modify_apk_signature_scheme_v2_verifier(file_path):
-    logging.info(f"Modifying ApkSignatureSchemeV2Verifier file: {file_path}")
-    modify_invoke_static(file_path)
-
-
-def modify_apk_signature_scheme_v3_verifier(file_path):
-    logging.info(f"Modifying ApkSignatureSchemeV3Verifier file: {file_path}")
-    modify_invoke_static(file_path)
-
-
-def modify_apk_signing_block_utils(file_path):
-    logging.info(f"Modifying ApkSigningBlockUtils file: {file_path}")
-    modify_invoke_static(file_path)
-
-
 def modify_invoke_static(file_path):
+    logging.info(f"Modifying file with invoke-static: {file_path}")
     with open(file_path, 'r') as file:
         lines = file.readlines()
 
@@ -200,70 +186,36 @@ def modify_strict_jar_verifier(file_path):
     logging.info(f"Completed modification for file: {file_path}")
 
 
-def modify_smali_files(directories):
-    for directory in directories:
-        signing_details = os.path.join(directory, 'android/content/pm/SigningDetails.smali')
-        package_parser_signing_details = os.path.join(directory,
-                                                      'android/content/pm/PackageParser$SigningDetails.smali')
-        apk_signature_verifier = os.path.join(directory, 'android/util/apk/ApkSignatureVerifier.smali')
-        apk_signature_scheme_v2_verifier = os.path.join(directory,
-                                                        'android/util/apk/ApkSignatureSchemeV2Verifier.smali')
-        apk_signature_scheme_v3_verifier = os.path.join(directory,
-                                                        'android/util/apk/ApkSignatureSchemeV3Verifier.smali')
-        apk_signing_block_utils = os.path.join(directory, 'android/util/apk/ApkSigningBlockUtils.smali')
-        package_parser = os.path.join(directory, 'android/content/pm/PackageParser.smali')
-        package_parser_exception = os.path.join(directory,
-                                                'android/content/pm/PackageParser$PackageParserException.smali')
-        strict_jar_verifier = os.path.join(directory, 'android/util/jar/StrictJarVerifier.smali')
+def find_and_modify_smali_files(directory):
+    target_files = {
+        'SigningDetails.smali': modify_file,
+        'PackageParser$SigningDetails.smali': modify_file,
+        'ApkSignatureVerifier.smali': lambda f: (modify_apk_signature_verifier(f), modify_file(f)),
+        'ApkSignatureSchemeV2Verifier.smali': modify_invoke_static,
+        'ApkSignatureSchemeV3Verifier.smali': modify_invoke_static,
+        'ApkSigningBlockUtils.smali': modify_invoke_static,
+        'PackageParser.smali': modify_package_parser,
+        'PackageParser$PackageParserException.smali': modify_exception_file,
+        'StrictJarVerifier.smali': modify_strict_jar_verifier,
+    }
 
-        if os.path.exists(signing_details):
-            logging.info(f"Found file: {signing_details}")
-            modify_file(signing_details)
-        else:
-            logging.warning(f"File not found: {signing_details}")
-        if os.path.exists(package_parser_signing_details):
-            logging.info(f"Found file: {package_parser_signing_details}")
-            modify_file(package_parser_signing_details)
-        else:
-            logging.warning(f"File not found: {package_parser_signing_details}")
-        if os.path.exists(apk_signature_verifier):
-            logging.info(f"Found file: {apk_signature_verifier}")
-            modify_apk_signature_verifier(apk_signature_verifier)
-            modify_file(apk_signature_verifier)
-        else:
-            logging.warning(f"File not found: {apk_signature_verifier}")
-        if os.path.exists(apk_signature_scheme_v2_verifier):
-            logging.info(f"Found file: {apk_signature_scheme_v2_verifier}")
-            modify_apk_signature_scheme_v2_verifier(apk_signature_scheme_v2_verifier)
-        else:
-            logging.warning(f"File not found: {apk_signature_scheme_v2_verifier}")
-        if os.path.exists(apk_signature_scheme_v3_verifier):
-            logging.info(f"Found file: {apk_signature_scheme_v3_verifier}")
-            modify_apk_signature_scheme_v3_verifier(apk_signature_scheme_v3_verifier)
-        else:
-            logging.warning(f"File not found: {apk_signature_scheme_v3_verifier}")
-        if os.path.exists(apk_signing_block_utils):
-            logging.info(f"Found file: {apk_signing_block_utils}")
-            modify_apk_signing_block_utils(apk_signing_block_utils)
-        else:
-            logging.warning(f"File not found: {apk_signing_block_utils}")
-        if os.path.exists(package_parser):
-            logging.info(f"Found file: {package_parser}")
-            modify_package_parser(package_parser)
-        else:
-            logging.warning(f"File not found: {package_parser}")
-        if os.path.exists(package_parser_exception):
-            logging.info(f"Found file: {package_parser_exception}")
-            modify_exception_file(package_parser_exception)
-        else:
-            logging.warning(f"File not found: {package_parser_exception}")
-        if os.path.exists(strict_jar_verifier):
-            logging.info(f"Found file: {strict_jar_verifier}")
-            modify_strict_jar_verifier(strict_jar_verifier)
-        else:
-            logging.warning(f"File not found: {strict_jar_verifier}")
+    for root, _, files in os.walk(directory):
+        for filename in files:
+            if filename in target_files:
+                file_path = os.path.join(root, filename)
+                logging.info(f"Found file: {file_path}")
+                if filename == 'ApkSignatureVerifier.smali':
+                    modify_apk_signature_verifier(file_path)
+                    modify_file(file_path)
+                else:
+                    target_files[filename](file_path)
 
 
 if __name__ == "__main__":
     directories = ["classes", "classes2", "classes3", "classes4", "classes5", "classes6"]
-    modify_smali_files(directories)
+    for directory in directories:
+        if os.path.exists(directory):
+            logging.info(f"Processing directory: {directory}")
+            find_and_modify_smali_files(directory)
+        else:
+            logging.warning(f"Directory not found: {directory}")
