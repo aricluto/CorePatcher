@@ -99,6 +99,7 @@ def modify_file(file_path):
                     modified_lines.append("    .registers 11\n")
                     modified_lines.append("    const/4 v0, 0x1\n")
                     modified_lines.append("    return v0\n")
+                modified_lines.append(line)  # Add the .end method line
                 in_method = False
                 method_type = None
             else:
@@ -160,50 +161,30 @@ def modify_parsing_package_utils(file_path):
     logging.info(f"Completed modification for ParsingPackageUtils file: {file_path}")
 
 
-def modify_smali_files(directories):
-    for directory in directories:
-        # Define paths for services.jar smali files
-        package_manager_service_utils = os.path.join(directory,
-                                                     'com/android/server/pm/PackageManagerServiceUtils.smali')
-        install_package_helper = os.path.join(directory,
-                                              'com/android/server/pm/InstallPackageHelper.smali')
-        verification_params = os.path.join(directory,
-                                           'com/android/server/pm/VerificationParams.smali')
-        parsing_package_utils = os.path.join(directory,
-                                             'com/android/server/pm/pkg/parsing/ParsingPackageUtils.smali')
-        package_info_utils = os.path.join(directory,
-                                          'com/android/server/pm/InstallPackageHelper.smali')
+def find_and_modify_smali_files(directory):
+    target_files = {
+        'PackageManagerServiceUtils.smali': modify_file,
+        'InstallPackageHelper.smali': modify_file,
+        'VerificationParams.smali': modify_file,
+        'ParsingPackageUtils.smali': modify_parsing_package_utils,
+    }
 
-        if os.path.exists(package_manager_service_utils):
-            logging.info(f"Found file: {package_manager_service_utils}")
-            modify_file(package_manager_service_utils)
-        else:
-            logging.warning(f"File not found: {package_manager_service_utils}")
+    for root, _, files in os.walk(directory):
+        for filename in files:
+            if filename in target_files:
+                file_path = os.path.join(root, filename)
+                logging.info(f"Found file: {file_path}")
+                target_files[filename](file_path)
 
-        if os.path.exists(install_package_helper):
-            logging.info(f"Found file: {install_package_helper}")
-            modify_file(install_package_helper)
-        else:
-            logging.warning(f"File not found: {install_package_helper}")
-
-        if os.path.exists(verification_params):
-            logging.info(f"Found file: {verification_params}")
-            modify_file(verification_params)
-        else:
-            logging.warning(f"File not found: {verification_params}")
-
-        if os.path.exists(parsing_package_utils):
-            logging.info(f"Found file: {parsing_package_utils}")
-            modify_parsing_package_utils(parsing_package_utils)
-        else:
-            logging.warning(f"File not found: {parsing_package_utils}")
-        if os.path.exists(package_info_utils):
-            logging.info(f"Found file: {package_info_utils}")
-            modify_invoke_interface(package_info_utils)
-        else:
-            logging.warning(f"File not found: {package_info_utils}")
+                if filename == 'InstallPackageHelper.smali':
+                    modify_invoke_interface(file_path)
 
 
 if __name__ == "__main__":
     directories = ["services_classes", "services_classes2", "services_classes3"]
-    modify_smali_files(directories)
+    for directory in directories:
+        if os.path.exists(directory):
+            logging.info(f"Processing directory: {directory}")
+            find_and_modify_smali_files(directory)
+        else:
+            logging.warning(f"Directory not found: {directory}")
